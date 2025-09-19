@@ -6,6 +6,7 @@ A modern Next.js dashboard application for managing [Ory Kratos](https://www.ory
 
 - **User Management**: Create, read, update, and delete user identities
 - **Search & Filtering**: Filter users by status (active, inactive, verified, unverified)
+- **Dark Mode Support**: Modern theme switcher with light/dark modes
 - **Bulk Operations**: CSV import for mass user creation (planned)
 - **Real-time Updates**: Server Actions with automatic page revalidation
 - **Progressive Enhancement**: Forms work without JavaScript
@@ -16,7 +17,8 @@ A modern Next.js dashboard application for managing [Ory Kratos](https://www.ory
 - **Framework**: Next.js 15.5.3 with App Router and Turbopack
 - **React**: 19.1.0 with Server Components
 - **TypeScript**: 5.x with strict configuration
-- **Styling**: Tailwind CSS 4.x
+- **Styling**: Tailwind CSS 4.x with dark mode support
+- **Theme Management**: next-themes for persistent theme switching
 - **Package Manager**: Bun (primary)
 - **Identity Service**: Ory Kratos Admin API
 
@@ -63,6 +65,7 @@ The main dashboard is available at [http://localhost:3000/dashboard](http://loca
 - Edit existing users
 - Delete users
 - Search and filter users
+- Switch between light and dark themes
 
 ## Development Commands
 
@@ -116,7 +119,8 @@ src/
 │   ├── UserActions.tsx     # Edit/delete user actions
 │   ├── UserTable.tsx       # Users display table
 │   ├── SearchAndFilters.tsx # Search and filter controls
-│   └── Pagination.tsx      # Pagination controls
+│   ├── Pagination.tsx      # Pagination controls
+│   └── ThemeToggle.tsx     # Dark/light mode theme switcher
 └── lib/
     └── kratos.ts           # Kratos API client and TypeScript types
 ```
