@@ -43,7 +43,10 @@ export interface CreateIdentityRequest {
   schema_id: string
   traits: {
     email: string
-    name?: string
+    name?: {
+      first?: string
+      last?: string
+    },
   }
   credentials?: {
     password?: {
@@ -91,7 +94,12 @@ export class KratosClient {
     })
 
     if (!response.ok) {
-      throw new Error(`Kratos API error: ${response.status} ${response.statusText}`)
+      const body = await response.json()
+      throw new Error(`Kratos API error: ${response.status} ${response.statusText} ${JSON.stringify(body)}`) // Include URL for easier debugging
+    }
+
+    if (response.status === 204) {
+      return {} as T // Return empty object for No Content responses
     }
 
     return response.json()

@@ -12,8 +12,8 @@ interface DashboardPageProps {
   }
 }
 
-export default async function DashboardPage({ searchParams }: DashboardPageProps) {
-  // const searchParams = await sParams;
+export default async function DashboardPage({ searchParams: sParams }: DashboardPageProps) {
+  const searchParams = await sParams;
   // Parse search parameters
   const currentPage = parseInt(searchParams.page || '1')
   const perPage = 20

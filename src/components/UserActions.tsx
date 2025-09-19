@@ -1,98 +1,76 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useFormStatus } from 'react-dom'
+import { useActionState } from 'react'
 import { KratosIdentity } from '@/lib/kratos'
+import { updateUserAction, deleteUserAction } from '@/app/actions'
 
 interface UserActionsProps {
   user: KratosIdentity
 }
 
+function UpdateButton() {
+  const { pending } = useFormStatus()
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+    >
+      {pending ? 'Updating...' : 'Update User'}
+    </button>
+  )
+}
+
+function DeleteButton() {
+  const { pending } = useFormStatus()
+
+  return (
+    <button
+      type="submit"
+      disabled={pending}
+      className="text-red-600 hover:text-red-900 disabled:opacity-50"
+    >
+      {pending ? 'Deleting...' : 'Delete'}
+    </button>
+  )
+}
+
 export function UserActions({ user }: UserActionsProps) {
-  const [loading, setLoading] = useState<'edit' | 'delete' | null>(null)
   const [showEditForm, setShowEditForm] = useState(false)
-  const [error, setError] = useState('')
-  const router = useRouter()
+  const [updateState, updateFormAction] = useActionState(updateUserAction, null)
+  const [deleteState, deleteFormAction] = useActionState(deleteUserAction, null)
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
-      return
-    }
-
-    setLoading('delete')
-    setError('')
-
-    try {
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: 'DELETE',
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to delete user')
-      }
-
-      router.refresh() // Refresh server component data
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setLoading(null)
-    }
-  }
-
-  const handleEdit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setLoading('edit')
-    setError('')
-
-    const formData = new FormData(e.currentTarget)
-    const email = formData.get('email') as string
-    const name = formData.get('name') as string
-
-    try {
-      const response = await fetch(`/api/users/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, name }),
-      })
-
-      if (!response.ok) {
-        const errorData = await response.json()
-        throw new Error(errorData.error || 'Failed to update user')
-      }
-
-      setShowEditForm(false)
-      router.refresh() // Refresh server component data
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred')
-    } finally {
-      setLoading(null)
-    }
-  }
 
   return (
     <>
       <div className="flex justify-end space-x-2">
         <button
           onClick={() => setShowEditForm(true)}
-          disabled={loading !== null}
-          className="text-blue-600 hover:text-blue-900 disabled:opacity-50"
+          className="text-blue-600 hover:text-blue-900"
         >
-          {loading === 'edit' ? 'Saving...' : 'Edit'}
+          Edit
         </button>
-        <button
-          onClick={handleDelete}
-          disabled={loading !== null}
-          className="text-red-600 hover:text-red-900 disabled:opacity-50"
+        <form
+          action={deleteFormAction}
+          style={{ display: 'inline' }}
+          onSubmit={(e) => {
+            if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+              e.preventDefault()
+            }
+          }}
         >
-          {loading === 'delete' ? 'Deleting...' : 'Delete'}
-        </button>
+          <input type="hidden" name="id" value={user.id} />
+          <DeleteButton />
+        </form>
       </div>
 
-      {error && (
-        <div className="mt-2 text-xs text-red-600">{error}</div>
+      {(updateState?.error || deleteState?.error) && (
+        <div className="mt-2 text-xs text-red-600">
+          {updateState?.error || deleteState?.error}
+        </div>
       )}
 
       {/* Edit Modal */}
@@ -113,7 +91,14 @@ export function UserActions({ user }: UserActionsProps) {
                 </button>
               </div>
 
-              <form onSubmit={handleEdit} className="space-y-4">
+              {updateState?.error && (
+                <div className="mb-4 bg-red-50 border border-red-200 rounded-md p-3">
+                  <p className="text-sm text-red-700">{updateState.error}</p>
+                </div>
+              )}
+
+              <form action={updateFormAction} className="space-y-4">
+                <input type="hidden" name="id" value={user.id} />
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                     Email *
@@ -136,7 +121,7 @@ export function UserActions({ user }: UserActionsProps) {
                     type="text"
                     name="name"
                     id="name"
-                    defaultValue={user.traits.name || ''}
+                    defaultValue={typeof user.traits.name === 'string' ? user.traits.name : ''}
                     className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   />
                 </div>
@@ -156,13 +141,7 @@ export function UserActions({ user }: UserActionsProps) {
                   >
                     Cancel
                   </button>
-                  <button
-                    type="submit"
-                    disabled={loading === 'edit'}
-                    className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading === 'edit' ? 'Updating...' : 'Update User'}
-                  </button>
+                  <UpdateButton />
                 </div>
               </form>
             </div>
