@@ -71,6 +71,71 @@ export interface KratosListResponse {
   total_count?: number
 }
 
+// Self-service login flow types
+export interface LoginFlow {
+  id: string
+  type: 'api' | 'browser'
+  expires_at: string
+  issued_at: string
+  request_url: string
+  ui: {
+    action: string
+    method: string
+    nodes: Array<{
+      type: 'input' | 'img' | 'a' | 'script' | 'text'
+      group: 'default' | 'password' | 'oidc' | 'webauthn'
+      attributes: {
+        name: string
+        type: string
+        value?: string
+        required?: boolean
+        disabled?: boolean
+      }
+      messages?: Array<{
+        id: number
+        text: string
+        type: 'info' | 'error' | 'success'
+      }>
+    }>
+    messages?: Array<{
+      id: number
+      text: string
+      type: 'info' | 'error' | 'success'
+    }>
+  }
+}
+
+export interface LoginSubmission {
+  method: 'password'
+  password_identifier: string
+  password: string
+  csrf_token?: string
+}
+
+export interface KratosSession {
+  id: string
+  active: boolean
+  expires_at: string
+  authenticated_at: string
+  issued_at: string
+  identity: KratosIdentity
+}
+
+export interface LoginResponse {
+  session: KratosSession
+  session_token?: string
+}
+
+export interface LogoutFlow {
+  id: string
+  type: 'api' | 'browser'
+  expires_at: string
+  issued_at: string
+  request_url: string
+  logout_url: string
+  logout_token: string
+}
+
 // Kratos API client
 export class KratosClient {
   private baseURL: string
@@ -185,6 +250,104 @@ export class KratosClient {
     await this.request<void>(`/admin/identities/${id}`, {
       method: 'DELETE',
     })
+  }
+
+  // Self-service login flow methods using public API
+  async initializeLoginFlow(): Promise<LoginFlow> {
+    const publicURL = KRATOS_PUBLIC_URL
+    const response = await fetch(`${publicURL}/self-service/login/api`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(`Failed to initialize login flow: ${JSON.stringify(error)}`)
+    }
+
+    return response.json()
+  }
+
+  async submitLogin(flowId: string, submission: LoginSubmission): Promise<LoginResponse> {
+    const publicURL = KRATOS_PUBLIC_URL
+    const response = await fetch(`${publicURL}/self-service/login?flow=${flowId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(submission),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(`Login failed: ${JSON.stringify(error)}`)
+    }
+
+    return response.json()
+  }
+
+  async whoami(sessionToken?: string): Promise<KratosSession> {
+    const publicURL = KRATOS_PUBLIC_URL
+    const headers: HeadersInit = {
+      'Accept': 'application/json',
+    }
+
+    if (sessionToken) {
+      headers['Authorization'] = `Bearer ${sessionToken}`
+    }
+
+    const response = await fetch(`${publicURL}/sessions/whoami`, {
+      method: 'GET',
+      headers,
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(`Session validation failed: ${JSON.stringify(error)}`)
+    }
+
+    return response.json()
+  }
+
+  async initializeLogoutFlow(sessionToken?: string): Promise<LogoutFlow> {
+    const publicURL = KRATOS_PUBLIC_URL
+    const headers: HeadersInit = {
+      'Accept': 'application/json',
+    }
+
+    if (sessionToken) {
+      headers['Authorization'] = `Bearer ${sessionToken}`
+    }
+
+    const response = await fetch(`${publicURL}/self-service/logout/api`, {
+      method: 'GET',
+      headers,
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(`Failed to initialize logout flow: ${JSON.stringify(error)}`)
+    }
+
+    return response.json()
+  }
+
+  async submitLogout(logoutToken: string): Promise<void> {
+    const publicURL = KRATOS_PUBLIC_URL
+    const response = await fetch(`${publicURL}/self-service/logout?token=${logoutToken}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(`Logout failed: ${JSON.stringify(error)}`)
+    }
   }
 }
 
